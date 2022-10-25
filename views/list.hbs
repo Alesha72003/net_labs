@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Список задач</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/css/list.css">
+</head>
+<body>
+    <h1>Список задач</h1>
+    <div id="main">
+{{#each this}}
+        <a href="/task/{{this.id}}">{{this.title}}</a>
+{{/each}}
+    </div>
+</body>
+<html>
