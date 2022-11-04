@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Задача: {{title}}</title>
+    <title>Задача: {{taskname}}</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="/css/list.css">
 </head>
 <body>
-    <h1>{{title}}</h1>
-    <p>{{description}}</p>
+    <h1>{{taskname}}</h1>
+    {{{description}}}
     {{#if image}}
     <img src="/img/{{image}}"></img>
     {{/if}}

@@ -9,8 +9,11 @@
     <h1>Список задач</h1>
     <div id="main">
 {{#each this}}
-        <a href="/task/{{this.id}}">{{this.title}}</a>
+        <a href="/task/{{this.id}}">{{this.taskname}}</a>
 {{/each}}
     </div>
+    <form action="/logout">
+        <button action="/logout">logout</button>
+    </form>
 </body>
 <html>

@@ -1,0 +1,10 @@
+{
+    "development": {
+      "username": "sc_web",
+      "password": "sc_web",
+      "database": "web",
+      "dialect": "postgres",
+      "host": "alesha72003.ru",
+      "port": 5432
+    }
+  }

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Авторизация</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/css/list.css">
+</head>
+<body>
+    {{#if message}}
+    <p>{{message}}</p>
+    {{/if}}
+    <h1>Авторизация</h1>
+    <div id="main">
+        <form action="/login" method="post">
+            <input type="text" name="referer" hidden='' value="{{referer}}">
+            <input type="text" name="username" placeholder='username'>
+            <input type="password" name="password" placeholder='password'>
+            <input type="submit" value="Login">
+        </form>
+    </div>
+</body>
+<html>
