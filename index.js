@@ -103,11 +103,14 @@ app.post("/login", passport.authenticate('local', {
 app.get("/login", (req, res) => {
   res.render("login.hbs", {
     message: req.session.messages ? req.session.messages.pop() : null,
-    referer: req.query.referer || req.originalUrl
+    referer: req.query.referer || '/'
   });
 });
 
-app.use('/logout', mustAuthenticated, function (req, res, next) {
+app.use('/logout', function (req, res, next) {
+  if (!req.user) {
+    return res.redirect('/');
+  }
   req.logout(function(err) {
     if (err) { return next(err); }
   });
@@ -264,6 +267,32 @@ app.delete('/user/:id', mustAuthenticated, async (req, res) => {
     res.status(500).send(err);
   }
 
+});
+
+app.post('/user/signup', async (req, res) => {
+  const accepted = new Set(['username', 'password']);
+  if (!Object.keys(req.body).map(el => accepted.has(el)).reduce((el, base) => base = base && el, true)) {
+    let notAcceptedItems = Object.keys(req.body).filter(el => !accepted.has(el))
+    return res.status(400).send(`'${notAcceptedItems.join('\', \'')}' is protected or not valid items`);
+  }
+  if (!req.body.username || !req.body.password) {
+    return res.status(400).send("username and password must be in request");
+  }
+  req.body.passwordhash = crypto.createHash('sha256').update(req.body.password).digest("hex");
+  delete req.body.password;
+  try {
+    await models.User.create(req.body);
+    return res.status(201).send("OK");
+  } catch(err) {
+    return res.status(500).send(err);
+  }
+});
+
+app.get('/user', (req, res) => {
+  if (req.user) {
+    return res.send({id: req.user.id});
+  }
+  return res.status(401).send("Not authenticated");
 });
 
 app.get('/group/:id', mustAuthenticated, async (req, res) => {
