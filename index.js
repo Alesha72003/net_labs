@@ -20,17 +20,22 @@ app.use(session({
   saveUninitialized: true ,
 }))
 
+const permissions = {
+  1: createProxyMiddleware({ target: 'http://localhost:3001', changeOrigin: true }),
+  2: createProxyMiddleware({ target: 'http://localhost:3002', changeOrigin: true }),
+}
+
 app.use(passport.initialize())
 app.use(passport.session())
 
 app.use("/admin", mustAuthenticated, async (req, res, next) => {
-  req.session.hasAccessToAdmin = req.session.hasAccessToAdmin || await models.User_Group.findOne({where: {UserId: req.user.id, GroupId: adminGroupId}});
-  if (req.session.hasAccessToAdmin) {
-    next();
+  req.session.middleware = req.session.middleware || permissions[(await models.User_Group.findOne({where: {UserId: req.user.id}, order: [['GroupId', 'ASC']]})).GroupId];
+  if (req.session.middleware) {
+    req.session.middleware(req, res);
   } else {
     return res.status(403).send("Access denied");
   }
-}, createProxyMiddleware({ target: 'http://localhost:3001', changeOrigin: true }));
+});
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json())
@@ -361,4 +366,4 @@ app.use("*", function (req, res) {
 
 
 
-app.listen(3000);
+app.listen(3080);
