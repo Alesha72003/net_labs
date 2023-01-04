@@ -29,9 +29,8 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 app.use("/admin", mustAuthenticated, async (req, res, next) => {
-  req.session.middleware = req.session.middleware || permissions[(await models.User_Group.findOne({where: {UserId: req.user.id}, order: [['GroupId', 'ASC']]})).GroupId];
-  if (req.session.middleware) {
-    req.session.middleware(req, res);
+  if (permissions[req.session.middlewareGroup]) {
+    permissions[req.session.middlewareGroup](req, res);
   } else {
     return res.status(403).send("Access denied");
   }
@@ -100,10 +99,14 @@ app.set("view engine", "hbs");
 app.use('/css', express.static('css'));
 app.use('/img', express.static('img'));
 
-app.post("/login", passport.authenticate('local', {
-   failureRedirect: "/login",
-   failureMessage: true
-}), (req, res) => { res.redirect(req.body.referer || '/'); });
+app.post("/login", passport.authenticate('local'), async (req, res) => { 
+  req.session.middlewareGroup = (await models.User_Group.findOne({where: {UserId: req.user.id}, order: [['GroupId', 'ASC']]})).GroupId;
+  res.send({
+    id: req.user.id, 
+    username: req.user.username,
+    admin: Boolean(req.session.middlewareGroup)
+  });
+});
 
 app.get("/login", (req, res) => {
   res.render("login.hbs", {
