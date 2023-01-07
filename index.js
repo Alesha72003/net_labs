@@ -65,7 +65,7 @@ function mustAuthenticated(req, res, next) {
   if (!req.isAuthenticated()) {
     let params = new URLSearchParams();
     params.append("referer", req.originalUrl || '/')
-    return res.redirect(`/login?${params.toString()}`);
+    return res.status(401).send("401 NOT AUTHORIZED");
   }
   next();
 }
@@ -115,14 +115,26 @@ app.get("/login", (req, res) => {
   });
 });
 
-app.use('/logout', function (req, res, next) {
+// app.use('/logout', function (req, res, next) {
+//   if (!req.user) {
+//     return res.redirect('/');
+//   }
+//   req.logout(function(err) {
+//     if (err) { return next(err); }
+//   });
+//   res.redirect('/login');
+// });
+
+app.use('/logout', (req, res) => {
   if (!req.user) {
-    return res.redirect('/');
+    return res.send("OK");
   }
-  req.logout(function(err) {
-    if (err) { return next(err); }
+  req.logout(err => {
+    if (err) { 
+      return res.status(500).send(err);
+    }
+    return res.send("OK")
   });
-  res.redirect('/login');
 });
 
 app.get('/task/:id', mustAuthenticated, checkAccessToTask, async function (req, res) {
@@ -134,7 +146,7 @@ app.get('/task/:id', mustAuthenticated, checkAccessToTask, async function (req, 
   if (!data) {
     res.status(404).send("Task not found");
   }
-  if (req.get('Accept') == 'application/json') {
+  if (req.get("Accept").split(",")[0].trim() == 'application/json') {
     return res.send(data);
   }
   return res.render("task", data.dataValues);
@@ -298,7 +310,11 @@ app.post('/user/signup', async (req, res) => {
 
 app.get('/user', (req, res) => {
   if (req.user) {
-    return res.send({id: req.user.id});
+    return res.send({
+      id: req.user.id,
+      username: req.user.username,
+      admin: req.session.middlewareGroup
+    });
   }
   return res.status(401).send("Not authenticated");
 });
@@ -357,7 +373,7 @@ app.get("//", mustAuthenticated, async function(req, response) {
     ]
   });
   data.forEach(el => { delete el.dataValues.Group.dataValues.Users })
-  if (req.get('Accept') == 'application/json') {
+  if (req.get("Accept").split(",")[0].trim() == 'application/json') {
     return response.send(data);
   }
   return response.render("list.hbs", data);
