@@ -43,6 +43,10 @@ passport.use(new LocalStrategy(function verify(username, password, cb) {
   models.User.findOne({
     where: {
       username
+    },
+    include: {
+      model: models.Group,
+      attributes: ["id", "name"]
     }
   }).then(function(user) {
     if (!user) {
@@ -104,7 +108,9 @@ app.post("/login", passport.authenticate('local'), async (req, res) => {
   res.send({
     id: req.user.id, 
     username: req.user.username,
-    admin: Boolean(req.session.middlewareGroup)
+    admin: Boolean(req.session.middlewareGroup),
+    canUpdate: true,
+    Groups: req.user.Groups
   });
 });
 
@@ -141,6 +147,10 @@ app.get('/task/:id', mustAuthenticated, checkAccessToTask, async function (req, 
   let data = await models.Task.findOne({
     where: {
       id: req.params.id
+    },
+    include: {
+      model: models.Group,
+      attributes: ['id', 'name'],
     }
   });
   if (!data) {
@@ -313,7 +323,9 @@ app.get('/user', (req, res) => {
     return res.send({
       id: req.user.id,
       username: req.user.username,
-      admin: req.session.middlewareGroup
+      admin: req.session.middlewareGroup,
+      canUpdate: true,
+      Groups: req.user.Groups
     });
   }
   return res.status(401).send("Not authenticated");
@@ -321,7 +333,7 @@ app.get('/user', (req, res) => {
 
 app.get('/group/:id', mustAuthenticated, async (req, res) => {
   let data = await models.Group.findOne({
-    attributes: ['id'],
+    attributes: ['id', "name"],
     where: {
       id: req.params.id
     },
