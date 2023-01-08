@@ -5,7 +5,8 @@ const LocalStrategy = require('passport-local');
 const { Client } = require('pg')
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
-const models = require('./models')
+const Sequelize = require('sequelize');
+const models = require('./models');
 
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const adminGroupId = 1;
@@ -362,6 +363,52 @@ app.get('/group/:id', mustAuthenticated, async (req, res) => {
   users.forEach(el => { delete el.dataValues.Groups; });
   data.dataValues.Users = users;
   res.send(data);
+});
+
+app.get('/task', mustAuthenticated, async (req, res) => {
+  console.log(req.query);
+  let whereClause = {}
+  if (req.query.title) {
+    whereClause.taskname = {
+      [Sequelize.Op.like]: `%${req.query.title}%`
+    }
+  }
+  if (req.query.group && !Number.isNaN(Number(req.query.group))) {
+    whereClause.GroupId = Number(req.query.group);
+  }
+  const check = {
+    NEW: req.query.new,
+    "IN WORK": req.query.in_work,
+    COMPLETED: req.query.completed
+  };
+  if (!Object.keys(check).reduce((acc, el) => acc && (check[el] === 'true'), true)) {
+    whereClause.status = {
+      [Sequelize.Op.in]: Object.keys(check).filter(el => (check[el] === 'true'))
+    }
+  }
+  console.log(whereClause);
+  let data = await models.Task.findAll({
+    attributes: ['id', 'taskname'],
+    where: whereClause,
+    include: {
+      model: models.Group,
+      attributes: ['id'],
+      required: true,
+      include: {
+        model: models.User,
+        attributes: ['id'],
+        required: true,
+        where: {
+          id: req.user.id
+        }
+      }
+    },
+    order: [
+      ['id', 'ASC']
+    ]
+  });
+  data.forEach(el => { delete el.dataValues.Group; });
+  return res.send(data);
 });
 
 app.get("//", mustAuthenticated, async function(req, response) {
