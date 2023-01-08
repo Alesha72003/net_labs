@@ -5,8 +5,25 @@ const LocalStrategy = require('passport-local');
 const { Client } = require('pg')
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
+const redis = require("redis");
+const connectRedis = require("connect-redis");
 const Sequelize = require('sequelize');
 const models = require('./models');
+
+const RedisStore = connectRedis(session);
+
+let redisClient = redis.createClient({
+  host: 'localhost',
+  port: 6379,
+  legacyMode: true
+});
+redisClient.connect()
+  .then(() => console.log("Connected to redis!"))
+  .catch((e) => {
+    console.log("Cannot connect to redis", e);
+    throw e;
+  });
+
 
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const adminGroupId = 1;
@@ -16,10 +33,16 @@ const app = express();
 app.use(cookieParser());
 
 app.use(session({
-  secret: "secret",
-  resave: false ,
-  saveUninitialized: true ,
-}))
+  store: new RedisStore({ client: redisClient }),
+  secret: 'secret$%^134',
+  resave: false,
+  saveUninitialized: false
+}));
+// app.use(session({
+//   secret: "secret",
+//   resave: false ,
+//   saveUninitialized: true ,
+// }))
 
 const permissions = {
   1: createProxyMiddleware({ target: 'http://localhost:3001', changeOrigin: true }),
@@ -140,7 +163,7 @@ app.use('/logout', (req, res) => {
     if (err) { 
       return res.status(500).send(err);
     }
-    return res.send("OK")
+    return res.send("OK");
   });
 });
 
