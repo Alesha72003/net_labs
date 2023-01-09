@@ -2,15 +2,19 @@ const express = require("express");
 const passport = require('passport');
 const session = require('express-session');
 const LocalStrategy = require('passport-local');
-const { Client } = require('pg')
 const cookieParser = require('cookie-parser');
-const crypto = require('crypto');
 const redis = require("redis");
 const connectRedis = require("connect-redis");
 const Sequelize = require('sequelize');
 const models = require('./models');
 
+
 const RedisStore = connectRedis(session);
+var wscts = {}
+
+const app = express();
+
+var expressWs = require('express-ws')(app);
 
 let redisClient = redis.createClient({
   url: 'redis://forshielders.ru:6379',
@@ -23,10 +27,6 @@ redisClient.connect()
     throw e;
   });
 
-
-
-const app = express();
-
 app.use(cookieParser());
 
 app.use(session({
@@ -35,11 +35,6 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
-// app.use(session({
-//   secret: "secret",
-//   resave: false ,
-//   saveUninitialized: true ,
-// }))
 
 app.use(passport.initialize())
 app.use(passport.session())
@@ -90,6 +85,35 @@ async function checkAccessToTask(req, res, next) {
   return res.status(403).send("Access denied");
 }
 
+app.ws('/ws', async function(ws, req) {
+  ws.on('open', function() {
+    wscts.forEach(element => {
+      element.send({
+        type: 'group/userStatusUpdate',
+        payload: {
+          id: req.user.id,
+          status: true
+        }
+      })
+    });
+  });
+  w = await ws
+  wscts[req.user.id] = w
+  ws.on('close', function() {
+    wscts.forEach(element => {
+      element.send({
+        type: 'group/userStatusUpdate',
+        payload: {
+          id: req.user.id,
+          status: false
+        }
+      })
+    });
+    delete wscts[req.user.id]
+  });
+});
+
+
 app.get('/chat/:id', mustAuthenticated, checkAccessToTask, async function (req, res) {
   let data = await models.Message.findAll({
     where: {
@@ -114,22 +138,28 @@ app.get('/chat/:id', mustAuthenticated, checkAccessToTask, async function (req, 
 app.post('/chat/:id', mustAuthenticated, async (req, res) => {
   // const to = req.params.id
   // const from = req.user.id
-  console.log("test");
   const accepted = new Set(['text']);
   if (!Object.keys(req.body).map(el => accepted.has(el)).reduce((el, base) => base = base && el, true)) {
     let notAcceptedItems = Object.keys(req.body).filter(el => !accepted.has(el))
     return res.status(400).send(`'${notAcceptedItems.join('\', \'')}' is protected or not valid items`);
   }
+  let newMessage
   try {
-    let newMessage = await models.Message.create({
+    newMessage = await models.Message.create({
       "from": req.user.id,
       "to": req.params.id,
       "text": req.body.text
     });
-    return res.status(201).send(newMessage);
   } catch(err) {
     return res.status(500).send(err);
   }
+  try{
+    wscts[req.params.id].send(req.body.text)
+  }
+  catch{
+    console.log("носок не наделся: нет второй ноги")
+  }
+  return res.status(201).send(newMessage);
 });
 
 app.listen(3080);
