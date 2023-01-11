@@ -86,28 +86,27 @@ async function checkAccessToTask(req, res, next) {
 }
 
 app.ws('/ws', async function(ws, req) {
-  ws.on('open', function() {
-    wscts.forEach(element => {
-      element.send({
-        type: 'group/userStatusUpdate',
-        payload: {
-          id: req.user.id,
-          status: true
-        }
-      })
-    });
-  });
   w = await ws
   wscts[req.user.id] = w
+  Object.keys(wscts).forEach(element => {
+    wscts[element].send(JSON.stringify({
+      type: 'chat/userStatusUpdate',
+      payload: {
+        id: req.user.id,
+        status: true
+      }
+    }))
+  });
+  
   ws.on('close', function() {
-    wscts.forEach(element => {
-      element.send({
-        type: 'group/userStatusUpdate',
+    Object.keys(wscts).forEach(element => {
+      wscts[element].send(JSON.stringify({
+        type: 'chat/userStatusUpdate',
         payload: {
           id: req.user.id,
           status: false
         }
-      })
+      }))
     });
     delete wscts[req.user.id]
   });
@@ -135,6 +134,37 @@ app.get('/chat/:id', mustAuthenticated, checkAccessToTask, async function (req, 
   }
 });
 
+app.delete('/chat/:id/:msg', mustAuthenticated, async (req, res) => {
+  let record = await models.Message.findOne({
+    attributes: ['id'],
+    where: {
+      id: req.params.msg
+    }
+  });
+
+  if (!record) {
+    return res.status(404).send("Message not found");
+  }
+
+  try {
+    await record.destroy();
+    try{
+      wscts[req.params.id].send(JSON.stringify({
+        type: 'chat/msgDeleted',
+        payload: req.params.req
+        
+      }))
+      console.log('->', newMessage)
+    }
+    catch{
+      console.log("носок не наделся: нет второй ноги")
+    }
+    return res.send("Message deleted");
+  } catch(err) {
+    return res.status(500).send(err);
+  }
+})
+
 app.post('/chat/:id', mustAuthenticated, async (req, res) => {
   // const to = req.params.id
   // const from = req.user.id
@@ -149,15 +179,33 @@ app.post('/chat/:id', mustAuthenticated, async (req, res) => {
       "from": req.user.id,
       "to": req.params.id,
       "text": req.body.text
-    });
+    }, {include: [models.User]});
+    await newMessage.reload()
   } catch(err) {
     return res.status(500).send(err);
   }
-  try{
-    wscts[req.params.id].send(req.body.text)
+  if(req.params.id > 0){
+    try{
+      wscts[req.params.id].send(JSON.stringify({
+        type: 'chat/newMessage',
+        payload: newMessage
+        
+      }))
+      console.log('->', newMessage)
+    }
+    catch{
+      console.log("носок не наделся: нет второй ноги")
+    }
   }
-  catch{
-    console.log("носок не наделся: нет второй ноги")
+  else{
+    // по хорошему надо вытянуть, какой группы таска и кидать только им 
+    Object.keys(wscts).forEach(element => {
+      wscts[element].send(JSON.stringify({
+        type: 'chat/newMessage',
+        payload: newMessage
+      }))
+      console.log('Отправил по сокету:', element, ' - ', newMessage)
+    });
   }
   return res.status(201).send(newMessage);
 });
