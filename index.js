@@ -85,6 +85,15 @@ async function checkAccessToTask(req, res, next) {
   return res.status(403).send("Access denied");
 }
 
+app.post("/login", passport.authenticate('local'), async (req, res) => { 
+  req.session.orders = (await models.Orders.findAll({where: {clientidy: req.user.id}})).GroupId;
+  res.send({
+    id: req.user.id, 
+    username: req.user.username,
+    canUpdate: true
+  });
+});
+
 app.get("/login", (req, res) => {
   res.render("login.hbs", {
     message: req.session.messages ? req.session.messages.pop() : null,
@@ -103,5 +112,10 @@ app.use('/logout', (req, res) => {
     return res.send("OK");
   });
 });
+
+
+app.get('/', (req, res) => {
+  res.send('im finey')
+})
 
 app.listen(3080);
