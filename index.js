@@ -62,13 +62,9 @@ function mustAuthenticated(req, res, next) {
 }
 
 passport.use(new LocalStrategy(function verify(username, password, cb) {
-  models.User.findOne({
+  models.Clients.findOne({
     where: {
       username
-    },
-    include: {
-      model: models.Group,
-      attributes: ["id", "name"]
     }
   }).then(function(user) {
     if (!user) {
@@ -141,13 +137,13 @@ app.get('/', (req, res) => {
 })
 
 app.get('/cart', mustAuthenticated, async (req, res) => {
-  let data = await models.OrdersToStaf.findOne({
+  let data = await models.OrdersToStafs.findAll({
     attributes: [idstaf],
     where: {
       idorder: req.user.id
     },
     include: {
-      model: models.Staf,
+      model: models.Stafs,
       required: true,
       attributes: ['id', 'name', 'price'],
       where: {
@@ -159,6 +155,61 @@ app.get('/cart', mustAuthenticated, async (req, res) => {
     return res.status(201).send([]);
   }
   res.send(data);
+})
+
+app.get('/order/:id', mustAuthenticated, async (req, res) => {
+  let data = await models.OrdersToStafs.findAll({
+    attributes: [idstaf],
+    where: {
+      idorder: req.params.id
+    },
+    include: {
+      model: models.Stafs,
+      required: true,
+      attributes: ['id', 'name', 'price'],
+      where: {
+        id: idstaf
+      }
+    }
+  });
+  if (!data) {
+    return res.status(404).send('wrong request');
+  }
+  res.send(data);
+})
+
+app.get('/myorders', mustAuthenticated, async (req, res) => {
+  console.log(req.user)
+  let data = await models.Orders.findAll({
+    attributes: ['id', 'createdAt', 'taskid'],
+    where: {
+      ClientId: req.user.id
+    }
+  })
+  res.send(data)
+})
+
+app.get('/staf/:id', async (req, res) => {
+  let data = await models.Stafs.findOne({
+    attributes: ['id', 'name', 'price', 'photo'],
+    where: {
+      id: req.params.id
+    }
+  })
+  res.send(data)
+})
+
+app.post('/staf/:id', mustAuthenticated, async (req, res) => {
+  try {
+    let itemtocart = await models.OrdersToStafs.create({
+      idorder: req.user.id,
+      idstaf: req.params.id
+    });
+    return res.status(201).send(itemtocart);
+  } 
+  catch(err) {
+    return res.status(500).send(err);
+  }
 })
 
 app.listen(3080);

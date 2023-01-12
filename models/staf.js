@@ -1,15 +1,15 @@
 'use strict';
 
 module.exports = function(sequelize, DataTypes) {
-	const Staf = sequelize.define('Staf', {
+	const Stafs = sequelize.define('Stafs', {
         name: DataTypes.STRING,
         photo: DataTypes.STRING,
         price: DataTypes.INTEGER
     });
 
-	Staf.associate = function(models) {
-        Staf.belongsToMany(models.Orders, {through: models.OrdersToStaf});
+	Stafs.associate = function(models) {
+        Stafs.belongsToMany(models.Orders, {through: models.OrdersToStafs});
 	};
 
-	return Staf;
+	return Stafs;
 };

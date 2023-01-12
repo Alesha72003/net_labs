@@ -1,5 +1,5 @@
 module.exports = function(sequelize, DataTypes) {
-	var OrdersToStaf = sequelize.define('OrdersToStaf', {
+	var OrdersToStafs = sequelize.define('OrdersToStafs', {
 		id: {
 			type: DataTypes.INTEGER,
 			primaryKey: true,
@@ -7,10 +7,10 @@ module.exports = function(sequelize, DataTypes) {
 		}
 	}, { timestamps: false });
 
-	OrdersToStaf.associate = function(models) {
+	OrdersToStafs.associate = function(models) {
 		// User_Group.belongsTo(models.Group);
 		// User_Group.belongsTo(models.User);
 	};
 
-	return OrdersToStaf;
+	return OrdersToStafs;
 };

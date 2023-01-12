@@ -6,7 +6,7 @@ module.exports = function(sequelize, DataTypes) {
 
 	Orders.associate = function(models) {
 		//Orders.belongsTo(models.Client);
-        Orders.belongsToMany(models.Staf, {through: models.OrdersToStaf});
+        Orders.belongsToMany(models.Stafs, {through: models.OrdersToStafs});
 	};
 
 	return Orders;
