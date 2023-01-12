@@ -7,6 +7,7 @@ const redis = require("redis");
 const connectRedis = require("connect-redis");
 const Sequelize = require('sequelize');
 const models = require('./models');
+const crypto = require('crypto');
 
 
 const RedisStore = connectRedis(session);
@@ -60,6 +61,28 @@ function mustAuthenticated(req, res, next) {
   next();
 }
 
+passport.use(new LocalStrategy(function verify(username, password, cb) {
+  models.User.findOne({
+    where: {
+      username
+    },
+    include: {
+      model: models.Group,
+      attributes: ["id", "name"]
+    }
+  }).then(function(user) {
+    if (!user) {
+      return cb(null, false, { message: 'Incorrect username or password.' });
+    }
+
+    let hash = crypto.createHash('sha256').update(password).digest("hex");
+    if (!crypto.timingSafeEqual(Buffer.from(user.passwordhash), Buffer.from(hash))) {
+      return cb(null, false, { message: 'Incorrect username or password.' });
+    }
+    return cb(null, user);
+  }, err => cb(err));
+}));
+
 async function checkAccessToTask(req, res, next) {
   let user = models.User.findOne({
     attributes: ['id'],
@@ -86,7 +109,7 @@ async function checkAccessToTask(req, res, next) {
 }
 
 app.post("/login", passport.authenticate('local'), async (req, res) => { 
-  req.session.orders = (await models.Orders.findAll({where: {clientidy: req.user.id}})).GroupId;
+  req.session.orders = (await models.Orders.findAll({where: {ClientId: req.user.id}})).GroupId;
   res.send({
     id: req.user.id, 
     username: req.user.username,
@@ -115,7 +138,7 @@ app.use('/logout', (req, res) => {
 
 
 app.get('/', (req, res) => {
-  res.send('im finey')
+  res.send('im fine')
 })
 
 app.listen(3080);

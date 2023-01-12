@@ -7,7 +7,7 @@ module.exports = function(sequelize, DataTypes) {
         price: DataTypes.INTEGER
     });
 
-	Task.associate = function(models) {
+	Staf.associate = function(models) {
         Staf.belongsToMany(models.Orders, {through: models.OrdersToStaf});
 	};
 
