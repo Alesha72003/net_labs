@@ -85,129 +85,23 @@ async function checkAccessToTask(req, res, next) {
   return res.status(403).send("Access denied");
 }
 
-app.ws('/ws', async function(ws, req) {
-  w = await ws
-  wscts[req.user.id] = w
-  Object.keys(wscts).forEach(element => {
-    wscts[element].send(JSON.stringify({
-      type: 'chat/userStatusUpdate',
-      payload: {
-        id: req.user.id,
-        status: true
-      }
-    }))
-  });
-  
-  ws.on('close', function() {
-    Object.keys(wscts).forEach(element => {
-      wscts[element].send(JSON.stringify({
-        type: 'chat/userStatusUpdate',
-        payload: {
-          id: req.user.id,
-          status: false
-        }
-      }))
-    });
-    delete wscts[req.user.id]
+app.get("/login", (req, res) => {
+  res.render("login.hbs", {
+    message: req.session.messages ? req.session.messages.pop() : null,
+    referer: req.query.referer || '/'
   });
 });
 
-
-app.get('/chat/:id', mustAuthenticated, checkAccessToTask, async function (req, res) {
-  let data = await models.Message.findAll({
-    where: {
-      to: req.params.id
-    },
-    include: {
-      model: models.User,
-      attributes: ['id', 'username'],
-    },
-    order: [
-      ["createdAt", "ASC"]
-    ]
+app.use('/logout', (req, res) => {
+  if (!req.user) {
+    return res.send("OK");
+  }
+  req.logout(err => {
+    if (err) { 
+      return res.status(500).send(err);
+    }
+    return res.send("OK");
   });
-  if (!data) {
-    return res.status(404).send("Chat not found");
-  }
-  if (req.get("Accept").split(",")[0].trim() == 'application/json') {
-    return res.send(data);
-  }
-});
-
-app.delete('/chat/:id/:msg', mustAuthenticated, async (req, res) => {
-  let record = await models.Message.findOne({
-    attributes: ['id'],
-    where: {
-      id: req.params.msg
-    }
-  });
-
-  if (!record) {
-    return res.status(404).send("Message not found");
-  }
-
-  try {
-    await record.destroy();
-    try{
-      wscts[req.params.id].send(JSON.stringify({
-        type: 'chat/msgDeleted',
-        payload: req.params.req
-        
-      }))
-      console.log('->', newMessage)
-    }
-    catch{
-      console.log("носок не наделся: нет второй ноги")
-    }
-    return res.send("Message deleted");
-  } catch(err) {
-    return res.status(500).send(err);
-  }
-})
-
-app.post('/chat/:id', mustAuthenticated, async (req, res) => {
-  // const to = req.params.id
-  // const from = req.user.id
-  const accepted = new Set(['text']);
-  if (!Object.keys(req.body).map(el => accepted.has(el)).reduce((el, base) => base = base && el, true)) {
-    let notAcceptedItems = Object.keys(req.body).filter(el => !accepted.has(el))
-    return res.status(400).send(`'${notAcceptedItems.join('\', \'')}' is protected or not valid items`);
-  }
-  let newMessage
-  try {
-    newMessage = await models.Message.create({
-      "from": req.user.id,
-      "to": req.params.id,
-      "text": req.body.text
-    }, {include: [models.User]});
-    await newMessage.reload()
-  } catch(err) {
-    return res.status(500).send(err);
-  }
-  if(req.params.id > 0){
-    try{
-      wscts[req.params.id].send(JSON.stringify({
-        type: 'chat/newMessage',
-        payload: newMessage
-        
-      }))
-      console.log('->', newMessage)
-    }
-    catch{
-      console.log("носок не наделся: нет второй ноги")
-    }
-  }
-  else{
-    // по хорошему надо вытянуть, какой группы таска и кидать только им 
-    Object.keys(wscts).forEach(element => {
-      wscts[element].send(JSON.stringify({
-        type: 'chat/newMessage',
-        payload: newMessage
-      }))
-      console.log('Отправил по сокету:', element, ' - ', newMessage)
-    });
-  }
-  return res.status(201).send(newMessage);
 });
 
 app.listen(3080);
