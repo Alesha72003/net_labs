@@ -136,9 +136,29 @@ app.use('/logout', (req, res) => {
   });
 });
 
-
 app.get('/', (req, res) => {
   res.send('im fine')
+})
+
+app.get('/cart', mustAuthenticated, async (req, res) => {
+  let data = await models.OrdersToStaf.findOne({
+    attributes: [idstaf],
+    where: {
+      idorder: req.user.id
+    },
+    include: {
+      model: models.Staf,
+      required: true,
+      attributes: ['id', 'name', 'price'],
+      where: {
+        id: idstaf
+      }
+    }
+  });
+  if (!data) {
+    return res.status(201).send([]);
+  }
+  res.send(data);
 })
 
 app.listen(3080);
