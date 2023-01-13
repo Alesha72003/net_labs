@@ -137,46 +137,69 @@ app.get('/', (req, res) => {
 })
 
 app.get('/cart', mustAuthenticated, async (req, res) => {
-  let data = await models.OrdersToStafs.findAll({
-    attributes: [idstaf],
+  let positions = await models.OrdersToStafs.findAll({
+    attributes: ['StafId'],
     where: {
-      idorder: req.user.id
-    },
-    include: {
-      model: models.Stafs,
-      required: true,
-      attributes: ['id', 'name', 'price'],
-      where: {
-        id: idstaf
-      }
+      OrderId: req.user.id
     }
-  });
+    // include: {
+    //   model: models.Stafs,
+    //   required: true,
+    //   attributes: ['id', 'name', 'price'],
+    //   where: {
+    //     id: StafId
+    //   }
+    // }
+    
+  })
+  data = []
+    //console.log(positions[0].dataValues.idstaf)
+    data = await Promise.all(positions.map(async el => await models.Stafs.findOne({
+      attributes: ['id', 'name', 'price', 'photo'],
+      where: {
+        id: el.dataValues.StafId
+      }
+    })));
+
   if (!data) {
     return res.status(201).send([]);
   }
   res.send(data);
 })
 
-app.get('/order/:id', mustAuthenticated, async (req, res) => {
-  let data = await models.OrdersToStafs.findAll({
-    attributes: [idstaf],
+app.get('/order/:id', mustAuthenticated, async (req, res) => { //два запроса?
+  let positions = await models.OrdersToStafs.findAll({
+    attributes: ['StafId'],
     where: {
       idorder: req.params.id
-    },
-    include: {
-      model: models.Stafs,
-      required: true,
-      attributes: ['id', 'name', 'price'],
-      where: {
-        id: idstaf
-      }
     }
-  });
+  })
+//  let
+//    include: {
+//      model: models.Stafs,
+//      required: true,
+//      attributes: ['id', 'name', 'price'],
+//      where: {
+//        id: idstaf
+//      }
+//    }
+
+    data = []
+    
+    //console.log(positions[0].dataValues.idstaf)
+    data = await Promise.all(positions.map(async el => await models.Stafs.findOne({
+      attributes: ['id', 'name', 'price', 'photo'],
+      where: {
+        id: el.dataValues.StafId
+      }
+    })));
+
   if (!data) {
     return res.status(404).send('wrong request');
   }
-  res.send(data);
+  res.send(data.map(el => el.dataValues));
 })
+
 
 app.get('/myorders', mustAuthenticated, async (req, res) => {
   console.log(req.user)
@@ -202,8 +225,8 @@ app.get('/staf/:id', async (req, res) => {
 app.post('/staf/:id', mustAuthenticated, async (req, res) => {
   try {
     let itemtocart = await models.OrdersToStafs.create({
-      idorder: req.user.id,
-      idstaf: req.params.id
+      OrderId: req.user.id,
+      StafId: req.params.id
     });
     return res.status(201).send(itemtocart);
   } 
@@ -213,10 +236,17 @@ app.post('/staf/:id', mustAuthenticated, async (req, res) => {
 })
 
 app.post('/createorder', mustAuthenticated, async (req, res) => {
-  //создать новый заказ
-  let newOrder = { id: 3 };
+  let newTask = await models.Tasks.create({
+    taskname: `Заказ клиента ${req.user.id}`,
+    GroupId: 2,
+    status: 'NEW'
+  })
+  let newOrder = await models.Orders.create({
+    clientid : req.user.id,
+    taskid: newTask
+  })
   let itemsFromCart = await models.OrdersToStafs.findAll({
-    attributes: ['orderid'],
+    attributes: ['OrderId'],
     where:{
       orderid: req.user.id
     }
