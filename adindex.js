@@ -104,6 +104,24 @@ async function checkAccessToTask(req, res, next) {
   return res.status(403).send("Access denied");
 }
 
+app.get('/client/:id', mustAuthenticated, async (req, res) => {
+  let data = await models.Clients.findOne({
+    attributes: ['id', 'username'],
+    where: {
+      id: req.params.id
+    },
+    include: {
+      model: models.Group,
+      attributes: ['id', 'name'],
+      required: true
+    }
+  });
+  if (!data) {
+    return res.status(404).send("Not found");
+  }
+  return res.send(data.dataValues);
+});
+
 app.post("/login", passport.authenticate('local'), async (req, res) => { 
   req.session.orders = (await models.Orders.findAll({where: {ClientId: req.user.id}})).GroupId;
   res.send({
@@ -135,6 +153,47 @@ app.use('/logout', (req, res) => {
 app.get('/', (req, res) => {
   res.send('im fine')
 })
+
+app.get('/client', (req, res) => {
+  if (req.user) {
+    return res.send({
+      id: req.user.id,
+      username: req.user.username,
+      canUpdate: true
+    });
+  }
+  return res.status(401).send("Not authenticated");
+});
+
+app.put('/client/:id', mustAuthenticated, async (req, res) => {
+  if (req.user.id != req.params.id) {
+    return res.status(403).send("Access denied");
+  }
+
+  const accepted = new Set(['username', 'password']);
+  if (!Object.keys(req.body).map(el => accepted.has(el)).reduce((el, base) => base = base && el, true)) {
+    let notAcceptedItems = Object.keys(req.body).filter(el => !accepted.has(el))
+    return res.status(400).send(`'${notAcceptedItems.join('\', \'')}' is protected or not valid items`);
+  }
+  let record = await models.Clients.findOne({
+    attributes: ['id'],
+    where: {
+      id: req.params.id
+    }
+  });
+  if ('password' in req.body) {
+    req.body.passwordhash = crypto.createHash('sha256').update(req.body.password).digest("hex");
+    delete req.body.password;
+  }
+
+  try {
+    record.update(req.body);
+  } catch(err) {
+    return res.status(500).send(err);
+  }
+
+  return res.status(200).send('OK');
+});
 
 app.get('/cart', mustAuthenticated, async (req, res) => {
   let positions = await models.OrdersToStafs.findAll({
@@ -255,4 +314,4 @@ app.post('/createorder', mustAuthenticated, async (req, res) => {
   return res.status(201).send(newOrder.id)
 })
 
-app.listen(3080);
+app.listen(3090);
