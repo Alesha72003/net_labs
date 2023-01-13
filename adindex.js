@@ -8,6 +8,7 @@ const connectRedis = require("connect-redis");
 const Sequelize = require('sequelize');
 const models = require('./models');
 const crypto = require('crypto');
+const { Op } = require("sequelize");
 
 
 const RedisStore = connectRedis(session);
@@ -78,6 +79,36 @@ passport.use(new LocalStrategy(function verify(username, password, cb) {
     return cb(null, user);
   }, err => cb(err));
 }));
+
+app.get('/catalog', mustAuthenticated, async (req, res) => {
+  console.log(req.query);
+  let whereClause = {}
+  if (req.query.title) {
+    whereClause.taskname = {
+      [Sequelize.Op.like]: `%${req.query.title}%`
+    }
+  }
+  if ((req.query.min_price && !Number.isNaN(Number(req.query.min_price))) || (req.query.max_price && !Number.isNaN(Number(req.query.max_price)))) {
+    whereClause.price = {};
+  }
+  if (req.query.min_price && !Number.isNaN(Number(req.query.min_price))) {
+    whereClause.price[Op.gte] = Number(req.query.min_price);
+  }
+  if (req.query.max_price && !Number.isNaN(Number(req.query.max_price))) {
+    whereClause.price[Op.lte] = Number(req.query.max_price);
+  }
+  console.log(whereClause);
+  let data = await models.Task.findAll({
+    attributes: ['id', 'taskname'],
+    where: whereClause,
+    order: [
+      ['id', 'ASC']
+    ],
+    limit: !Number.isNaN(Number(req.query.limit)) ? Number(req.query.limit) : undefined
+  });
+  return res.send(data);
+});
+
 
 async function checkAccessToTask(req, res, next) {
   let user = models.User.findOne({
@@ -314,4 +345,4 @@ app.post('/createorder', mustAuthenticated, async (req, res) => {
   return res.status(201).send(newOrder.id)
 })
 
-app.listen(3090);
+app.listen(3190);
