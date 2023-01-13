@@ -169,7 +169,6 @@ app.put('/client/:id', mustAuthenticated, async (req, res) => {
   if (req.user.id != req.params.id) {
     return res.status(403).send("Access denied");
   }
-
   const accepted = new Set(['username', 'password']);
   if (!Object.keys(req.body).map(el => accepted.has(el)).reduce((el, base) => base = base && el, true)) {
     let notAcceptedItems = Object.keys(req.body).filter(el => !accepted.has(el))
@@ -201,15 +200,6 @@ app.get('/cart', mustAuthenticated, async (req, res) => {
     where: {
       OrderId: req.user.id
     }
-    // include: {
-    //   model: models.Stafs,
-    //   required: true,
-    //   attributes: ['id', 'name', 'price'],
-    //   where: {
-    //     id: StafId
-    //   }
-    // }
-    
   })
   data = []
     //console.log(positions[0].dataValues.idstaf)
@@ -233,15 +223,6 @@ app.get('/order/:id', mustAuthenticated, async (req, res) => { //два запр
       idorder: req.params.id
     }
   })
-//  let
-//    include: {
-//      model: models.Stafs,
-//      required: true,
-//      attributes: ['id', 'name', 'price'],
-//      where: {
-//        id: idstaf
-//      }
-//    }
 
     data = []
     
