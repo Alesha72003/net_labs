@@ -84,7 +84,7 @@ app.get('/catalog', mustAuthenticated, async (req, res) => {
   console.log(req.query);
   let whereClause = {}
   if (req.query.title) {
-    whereClause.taskname = {
+    whereClause.name = {
       [Sequelize.Op.like]: `%${req.query.title}%`
     }
   }
@@ -98,13 +98,12 @@ app.get('/catalog', mustAuthenticated, async (req, res) => {
     whereClause.price[Op.lte] = Number(req.query.max_price);
   }
   console.log(whereClause);
-  let data = await models.Task.findAll({
-    attributes: ['id', 'taskname'],
+  let data = await models.Stafs.findAll({
     where: whereClause,
     order: [
       ['id', 'ASC']
     ],
-    limit: !Number.isNaN(Number(req.query.limit)) ? Number(req.query.limit) : undefined
+    ...req.query.count && !Number.isNaN(Number(req.query.count)) ? {limit: Number(req.query.count)} : {}
   });
   return res.send(data);
 });
