@@ -212,4 +212,17 @@ app.post('/staf/:id', mustAuthenticated, async (req, res) => {
   }
 })
 
+app.post('/createorder', mustAuthenticated, async (req, res) => {
+  //создать новый заказ
+  let newOrder = { id: 3 };
+  let itemsFromCart = await models.OrdersToStafs.findAll({
+    attributes: ['orderid'],
+    where:{
+      orderid: req.user.id
+    }
+  })
+  itemsFromCart.map(el => el.update(newOrder.id))
+  return res.status(201).send(newOrder.id)
+})
+
 app.listen(3080);
