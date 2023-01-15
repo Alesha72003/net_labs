@@ -178,7 +178,7 @@ app.post('/chat/:id', mustAuthenticated, async (req, res) => {
     newMessage = await models.Message.create({
       "from": req.user.id,
       "to": req.params.id,
-      "text": req.body.text
+      "text": req.body.text,
     }, {include: [models.User]});
     await newMessage.reload()
   } catch(err) {
@@ -199,10 +199,10 @@ app.post('/chat/:id', mustAuthenticated, async (req, res) => {
   }
   else{
     // по хорошему надо вытянуть, какой группы таска и кидать только им 
-    Object.keys(wscts).forEach(element => {
+    Object.keys(wscts).filter(el => el != req.user.id).forEach(element => {
       wscts[element].send(JSON.stringify({
         type: 'chat/newMessage',
-        payload: newMessage
+        payload: {...newMessage.dataValues, status: true}
       }))
       console.log('Отправил по сокету:', element, ' - ', newMessage)
     });
