@@ -161,6 +161,15 @@ app.post("/login", passport.authenticate('local'), async (req, res) => {
   });
 });
 
+app.post("/registration", async (req, res) => { 
+  let user = await models.User.create({
+    username: req.body.username,
+    passwordhash: crypto.createHash('sha256').update(req.body.password).digest("hex")
+  });
+  
+  return res.status(200).send(user);
+});
+
 app.get("/login", (req, res) => {
   res.render("login.hbs", {
     message: req.session.messages ? req.session.messages.pop() : null,
