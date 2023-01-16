@@ -63,7 +63,7 @@ function mustAuthenticated(req, res, next) {
 }
 
 passport.use(new LocalStrategy(function verify(username, password, cb) {
-  models.Users.findOne({
+  models.User.findOne({
     where: {
       username
     }
@@ -135,7 +135,7 @@ async function checkAccessToTask(req, res, next) {
 }
 
 app.get('/client/:id', mustAuthenticated, async (req, res) => {
-  let data = await models.Users.findOne({
+  let data = await models.User.findOne({
     attributes: ['id', 'username'],
     where: {
       id: req.params.id
@@ -204,7 +204,7 @@ app.put('/client/:id', mustAuthenticated, async (req, res) => {
     let notAcceptedItems = Object.keys(req.body).filter(el => !accepted.has(el))
     return res.status(400).send(`'${notAcceptedItems.join('\', \'')}' is protected or not valid items`);
   }
-  let record = await models.Users.findOne({
+  let record = await models.User.findOne({
     attributes: ['id'],
     where: {
       id: req.params.id
