@@ -114,9 +114,13 @@ app.ws('/ws', async function(ws, req) {
 
 
 app.get('/chat/:id', mustAuthenticated, checkAccessToTask, async function (req, res) {
+  
   let data = await models.Message.findAll({
     where: {
-      to: req.params.id
+      [Sequelize.Op.or]: {
+        from: req.params.id,
+        to: req.params.id
+      }
     },
     include: {
       model: models.User,
@@ -126,6 +130,29 @@ app.get('/chat/:id', mustAuthenticated, checkAccessToTask, async function (req, 
       ["createdAt", "ASC"]
     ]
   });
+  if(req.params.id >= 0){
+    data = await models.Message.findAll({
+      where: {
+        [Sequelize.Op.or]: [
+          {[Sequelize.Op.and]:[
+            {to: req.params.id},
+            {from: req.user.id}
+          ]},
+          {[Sequelize.Op.and]:[
+            {from: req.params.id},
+            {to: req.user.id}
+          ]}
+        ]
+      },
+      include: {
+        model: models.User,
+        attributes: ['id', 'username'],
+      },
+      order: [
+        ["createdAt", "ASC"]
+      ]
+    });
+  }
   if (!data) {
     return res.status(404).send("Chat not found");
   }
