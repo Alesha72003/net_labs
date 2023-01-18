@@ -80,7 +80,7 @@ passport.use(new LocalStrategy(function verify(username, password, cb) {
   }, err => cb(err));
 }));
 
-app.get('/catalog', mustAuthenticated, async (req, res) => {
+app.get('/catalog', async (req, res) => {
   console.log(req.query);
   let whereClause = {}
   if (req.query.title) {
