@@ -314,6 +314,29 @@ app.post('/staf/:id', mustAuthenticated, async (req, res) => {
   }
 })
 
+app.post('/rmstaf/:id', mustAuthenticated, async (req, res) => {
+  let record = await models.OrdersToStafs.findOne({
+    attributes: ['OrderId', 'StafId'],
+    where: {
+      OrderId: req.user.id,
+      StafId: req.params.id
+    }
+  });
+
+  if (!record) {
+    return res.status(404).send("Item not found");
+  }
+
+  try {
+    await record.destroy();
+    return res.status(201).send("Item deleted")
+  }
+  catch{
+    return res.status(500).send(err);
+  }
+
+})
+
 app.post('/createorder', mustAuthenticated, async (req, res) => {
   let newTask = await models.Tasks.create({
     taskname: `Заказ клиента ${req.user.id}`,
