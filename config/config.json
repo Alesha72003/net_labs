@@ -4,7 +4,7 @@
       "password": "sc_web",
       "database": "web",
       "dialect": "postgres",
-      "host": "alesha72003.ru",
+      "host": "forshielders.ru",
       "port": 5432
     }
   }
