@@ -162,12 +162,25 @@ app.post("/login", passport.authenticate('local'), async (req, res) => {
 });
 
 app.post("/registration", async (req, res) => { 
-  let user = await models.User.create({
+  let user, cart;
+  try{
+  user = await models.User.create({
     username: req.body.username,
     passwordhash: crypto.createHash('sha256').update(req.body.password).digest("hex")
   });
+
+  user.reload()
+
+  cart = await models.Orders.create({
+    id: -user.dataValues.id,
+    ClientId : user.dataValues.id
+  })
+  }
+  catch(err){
+    return res.status(501).send('Извините, все пошло по пизде, попробуйте еще раз\n' + err + ' peepeepoopo ' + user);
+  }
   
-  return res.status(200).send(user);
+  return res.status(200).send(cart);
 });
 
 app.get("/login", (req, res) => {
@@ -237,7 +250,7 @@ app.get('/cart', mustAuthenticated, async (req, res) => {
   let positions = await models.OrdersToStafs.findAll({
     attributes: ['StafId'],
     where: {
-      OrderId: req.user.id
+      OrderId: -req.user.id
     }
   })
   data = []
@@ -259,7 +272,7 @@ app.get('/order/:id', mustAuthenticated, async (req, res) => { //два запр
   let positions = await models.OrdersToStafs.findAll({
     attributes: ['StafId'],
     where: {
-      idorder: req.params.id
+      OrderId: req.params.id
     }
   })
 
@@ -283,9 +296,12 @@ app.get('/order/:id', mustAuthenticated, async (req, res) => { //два запр
 app.get('/myorders', mustAuthenticated, async (req, res) => {
   console.log(req.user)
   let data = await models.Orders.findAll({
-    attributes: ['id', 'createdAt', 'taskid'],
+    attributes: ['id', 'createdAt'],
     where: {
-      ClientId: req.user.id
+      ClientId: req.user.id,
+      [Sequelize.Op.not]: {
+        id: -req.user.id
+      }
     }
   })
   res.send(data)
@@ -302,9 +318,18 @@ app.get('/staf/:id', async (req, res) => {
 })
 
 app.post('/staf/:id', mustAuthenticated, async (req, res) => {
+  let record = await models.Orders.findOne({
+    attributes: ['id'],
+    where: {
+      id: -req.user.id
+    }
+  });
+  if(!record){
+    return res.status(228).send("Ты падаль, я тебя не знаю и не уважаю");
+  }
   try {
     let itemtocart = await models.OrdersToStafs.create({
-      OrderId: req.user.id,
+      OrderId: -req.user.id,
       StafId: req.params.id
     });
     return res.status(201).send(itemtocart);
@@ -316,9 +341,9 @@ app.post('/staf/:id', mustAuthenticated, async (req, res) => {
 
 app.post('/rmstaf/:id', mustAuthenticated, async (req, res) => {
   let record = await models.OrdersToStafs.findOne({
-    attributes: ['OrderId', 'StafId'],
+    attributes: ['id', 'OrderId', 'StafId'],
     where: {
-      OrderId: req.user.id,
+      OrderId: -req.user.id,
       StafId: req.params.id
     }
   });
@@ -326,35 +351,34 @@ app.post('/rmstaf/:id', mustAuthenticated, async (req, res) => {
   if (!record) {
     return res.status(404).send("Item not found");
   }
-
+  await record.destroy();
   try {
     await record.destroy();
-    return res.status(201).send("Item deleted")
+    return res.status(200).send("Item deleted")
   }
-  catch{
+  catch(err){
     return res.status(500).send(err);
   }
 
 })
 
 app.post('/createorder', mustAuthenticated, async (req, res) => {
-  let newTask = await models.Tasks.create({
+  let newTask = await models.Task.create({
     taskname: `Заказ клиента ${req.user.id}`,
     GroupId: 2,
     status: 'NEW'
   })
   let newOrder = await models.Orders.create({
-    clientid : req.user.id,
-    taskid: newTask
+    ClientId : req.user.id
   })
   let itemsFromCart = await models.OrdersToStafs.findAll({
-    attributes: ['OrderId'],
+    attributes: ['id', 'OrderId'],
     where:{
-      orderid: req.user.id
+      OrderId: -req.user.id
     }
   })
-  itemsFromCart.map(el => el.update(newOrder.id))
-  return res.status(201).send(newOrder.id)
+  itemsFromCart.map(el => el.update({OrderId: newOrder.id}))
+  return res.status(201).send({id: newOrder.id})
 })
 
 app.listen(3090);
