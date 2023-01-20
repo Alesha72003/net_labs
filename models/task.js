@@ -7,6 +7,7 @@ module.exports = function(sequelize, DataTypes) {
 		// creationdate: DataTypes.DATE,
 		// modification_date: DataTypes.DATE,
 		deadlineAt: DataTypes.DATE,
+		OrderId: DataTypes.INTEGER,
 		status: DataTypes.ENUM(["NEW", "IN WORK", "COMPLETED", "DELETED"])
     });
 

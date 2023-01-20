@@ -304,6 +304,26 @@ app.get('/myorders', mustAuthenticated, async (req, res) => {
       }
     }
   })
+  data = await Promise.all(data.map(async el => {
+    let task = await models.Task.findOne({
+      attributes: ["id", "status", "OrderId"],
+      where: {
+        OrderId: el.id
+      }
+    })
+    if(task){
+      return {
+        ...el.dataValues,
+        status: task.status
+      }
+    }
+    else{
+      return {
+        ...el.dataValues,
+        status: "unknown"
+      }
+    }
+}));
   res.send(data)
 })
 
