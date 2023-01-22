@@ -12,7 +12,7 @@ const { Op } = require("sequelize");
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const permissions = {
-  4: createProxyMiddleware({ target: 'http://localhost:5555', changeOrigin: true })
+  4: createProxyMiddleware({ target: 'http://forshielders.ru:5555', changeOrigin: true })
 };
 
 async function findPriorityGroup(req, res, next) {
