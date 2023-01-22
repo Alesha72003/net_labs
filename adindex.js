@@ -16,7 +16,7 @@ const permissions = {
 };
 
 async function findPriorityGroup(req, res, next) {
-  req.session.middlewareGroup = (await models.User_Group.findOne({
+  const record = (await models.User_Group.findOne({
     where: {
       UserId: req.user.id,
       GroupId: {
@@ -26,18 +26,13 @@ async function findPriorityGroup(req, res, next) {
     order: [
       ['GroupId', 'ASC']
     ]
-  })).GroupId;
-  req.session.admin = !!req.session.middlewareGroup;
+  }))
+  req.session.middlewareGroup = record ? record.GroupId : null;
+  req.session.admin = !!record;
   next();
 }
 
-app.use('/admin', (req, res) => {
-  if (req.session.middlewareGroup && permissions[req.session.middlewareGroup]) {
-    permissions[req.session.middlewareGroup](req,res)
-  } else {
-    return res.status(403).send("Access denied");
-  }
-});
+
 
 const RedisStore = connectRedis(session);
 var wscts = {}
@@ -107,6 +102,14 @@ passport.use(new LocalStrategy(function verify(username, password, cb) {
     return cb(null, user);
   }, err => cb(err));
 }));
+
+app.use('/admin', (req, res) => {
+  if (req.session.middlewareGroup && permissions[req.session.middlewareGroup]) {
+    permissions[req.session.middlewareGroup](req,res)
+  } else {
+    return res.status(403).send("Access denied");
+  }
+});
 
 app.get('/catalog', async (req, res) => {
   console.log(req.query);
