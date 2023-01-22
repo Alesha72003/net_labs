@@ -9,7 +9,35 @@ const Sequelize = require('sequelize');
 const models = require('./models');
 const crypto = require('crypto');
 const { Op } = require("sequelize");
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
+const permissions = {
+  4: createProxyMiddleware({ target: 'http://localhost:5555', changeOrigin: true })
+};
+
+async function findPriorityGroup(req, res, next) {
+  req.session.middlewareGroup = (await models.User_Group.findOne({
+    where: {
+      UserId: req.user.id,
+      GroupId: {
+        [Op.in]: Object.keys(permissions)
+      }
+    }, 
+    order: [
+      ['GroupId', 'ASC']
+    ]
+  })).GroupId;
+  req.session.admin = !!req.session.middlewareGroup;
+  next();
+}
+
+app.use('/admin', (req, res) => {
+  if (req.session.middlewareGroup && permissions[req.session.middlewareGroup]) {
+    permissions[req.session.middlewareGroup](req,res)
+  } else {
+    return res.status(403).send("Access denied");
+  }
+});
 
 const RedisStore = connectRedis(session);
 var wscts = {}
@@ -152,12 +180,13 @@ app.get('/client/:id', mustAuthenticated, async (req, res) => {
   return res.send(data.dataValues);
 });
 
-app.post("/login", passport.authenticate('local'), async (req, res) => { 
+app.post("/login", passport.authenticate('local'), findPriorityGroup, async (req, res) => { 
   req.session.orders = (await models.Orders.findAll({where: {ClientId: req.user.id}})).GroupId;
   res.send({
     id: req.user.id, 
     username: req.user.username,
-    canUpdate: true
+    canUpdate: true,
+    admin: req.session.admin
   });
 });
 
@@ -211,7 +240,8 @@ app.get('/client', (req, res) => {
     return res.send({
       id: req.user.id,
       username: req.user.username,
-      canUpdate: true
+      canUpdate: true,
+      admin: req.session.admin
     });
   }
   return res.status(401).send("Not authenticated");
